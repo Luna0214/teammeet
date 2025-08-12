@@ -32,6 +32,8 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+.packages
+pubspec.lock
 
 # Symbolication related
 app.*.symbols
@@ -43,3 +45,91 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Android related
+android/.gradle/
+android/app/build/
+android/local.properties
+
+# iOS related
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/.symlinks/
+ios/Pods/
+ios/Runner/GeneratedPluginRegistrant.*
+
+# Firebase related
+firebase_options.dart
+android/app/google-services.json
+ios/GoogleService-Info.plist
+macos/GoogleService-Info.plist
+web/firebase-messaging-sw.js
+windows/firebase-messaging-sw.js
+linux/firebase-messaging-sw.js
+macos/firebase-messaging-sw.js
+
+# Firebase Admin SDK service account key
+serviceAccountKey.json
+*.secret.json
+.env
+.env.*
+
+# Additional security measures
+# API keys and secrets
+**/api_keys.dart
+**/secrets.dart
+**/config.dart
+**/credentials.dart
+
+# Local configuration files
+local.properties
+local_config.dart
+debug_config.dart
+
+# Keystore files for Android signing
+*.keystore
+*.jks
+key.properties
+
+# iOS certificates and provisioning profiles
+*.p12
+*.mobileprovision
+*.cer
+
+# Logs and temporary files
+*.tmp
+*.temp
+*.log.*
+logs/
+
+# User-specific files
+*.user
+*.userprefs
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Cache directories
+.cache/
+cache/
+
+# Test coverage reports
+coverage/
+*.lcov
+
+# Build artifacts
+dist/
+build/
+out/
+
+# Package manager lock files (consider if you want to commit these)
+# package-lock.json
+# yarn.lock
