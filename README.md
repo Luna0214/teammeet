@@ -1,8 +1,8 @@
-# TeamMeet
+# TeamMeet(Still in construction)
 
 A cross-platform real-time communication app built with Flutter and WebRTC.
 
-## 🚀 Features
+## 🚀 Features(예정)
 
 - 🔒 Firebase Auth 기반 로그인
 - 📞 WebRTC 기반 화상/음성 통화
