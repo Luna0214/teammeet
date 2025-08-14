@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'login_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -8,14 +9,53 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+    TextEditingController emailController = TextEditingController();
+    TextEditingController passwordController = TextEditingController();
 
+    @override
+    void initState() {
+      super.initState();
+      emailController.text = '';
+      passwordController.text = '';
+    }
+
+    @override
+    void dispose() {
+      emailController.dispose();
+      passwordController.dispose();
+      super.dispose();
+    }
+
+    Widget _loginTextField(String hintText, TextEditingController controller) {
+      return TextField(
+        controller: controller,
+        onTapOutside: (event) {
+          FocusScope.of(context).unfocus();
+        },
+        obscureText: hintText == 'Password' ? true : false,
+        decoration: InputDecoration(
+          hintText: hintText,
+          hintStyle: TextStyle(color: Colors.white),
+          border: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.white),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.white),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.white),
+          ),
+        ),
+      );
+    }
 
     Widget _bodyWidget() {
-      return Padding(
-        padding: const EdgeInsets.all(20.0),
+      return SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            SizedBox(height: MediaQuery.of(context).size.height * 0.2,),
             Text('TeamMeet', style: TextStyle(fontSize: 60, fontWeight: FontWeight.bold, color: Colors.white),),
             SizedBox(height: 50,),
             Text('로그인', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),),
@@ -24,29 +64,21 @@ class _LoginPageState extends State<LoginPage> {
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               child: Column(
                 children: [
-                  TextField(
-                decoration: InputDecoration(
-                  hintText: 'Email',
-                  hintStyle: TextStyle(color: Colors.white),
-                ),
-              ),
-              SizedBox(height: 20,),
-              TextField(
-                decoration: InputDecoration(
-                  hintText: 'Password',
-                  hintStyle: TextStyle(color: Colors.white),
-                ),
-              ),
+                  _loginTextField('Email', emailController),
+                  SizedBox(height: 20,),
+                  _loginTextField('Password', passwordController),
+              SizedBox(height: 20,),              
                 ],
               ),
             ),
-            
             SizedBox(height: 20,),
             ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                LoginService.login(emailController.text, passwordController.text, context);
+              },
               child: Text('로그인'),
             ),
-            SizedBox(height: 100),
+            SizedBox(height: 80),
             Text('소셜 로그인', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),),
             SizedBox(height: 20,),
             Row(
