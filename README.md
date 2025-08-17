@@ -15,7 +15,7 @@ A cross-platform real-time communication app built with Flutter and WebRTC.
 - Flutter 3.29.2
 - flutter_bloc + hydrated_bloc
 - flutter_webrtc
-- Firebase Auth / RTDB / Firestore
+- Firebase Auth / Firestore / Firebase Storage
 - WebSocket
 - MethodChannel (Kotlin, Swift)
 - Git + GitHub
@@ -26,7 +26,7 @@ A cross-platform real-time communication app built with Flutter and WebRTC.
 lib/
 ├── main.dart
 ├── core/
-│   ├── platform/
+│   ├── platform/ 
 │   ├── method_channel/
 │   └── utils/
 ├── features/

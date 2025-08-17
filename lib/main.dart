@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:teammeet/features/auth/login_page.dart';
+import 'package:teammeet/shared/app_router.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -18,6 +19,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: AppRouter.navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'teammeet',
       theme: ThemeData(

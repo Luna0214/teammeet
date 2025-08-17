@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../home/home_page.dart';
 import 'login_page.dart';
+import '../../shared/app_router.dart';
 
 class LoginService {
   static Future<void> login(String email, String password, BuildContext context) async {
@@ -24,7 +25,7 @@ class LoginService {
       debugPrint('Firebase Auth userCredential: ${userCredential.user?.uid}');
 
       if (context.mounted && userCredential.user != null) {
-        Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => HomePage()), (route) => false);
+        AppRouter.pushAndRemoveUntil(const HomePage());
       } else {
         debugPrint('Firebase Auth userCredential: ${userCredential.user?.uid}');
       }
@@ -66,6 +67,7 @@ class LoginService {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
+          icon: const Icon(Icons.error, size: 40, color: Colors.red,),
           title: Text(title),
           content: Text(message),
           actions: [
@@ -91,7 +93,7 @@ class LoginService {
     }
 
     if (context.mounted) {
-      Navigator.push(context, MaterialPageRoute(builder: (context) => LoginPage()));
+      AppRouter.pushAndRemoveUntil(LoginPage());
     }
   }
 }
