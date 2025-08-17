@@ -60,38 +60,40 @@ class _LoginPageState extends State<LoginPage> {
             Text('TeamMeet', style: TextStyle(fontSize: 60, fontWeight: FontWeight.bold, color: Colors.white),),
             SizedBox(height: 120,),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              padding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width * 0.1),
               child: Column(
                 children: [
                   _loginTextField('Email', emailController),
                   SizedBox(height: 20,),
                   _loginTextField('Password', passwordController),
-              SizedBox(height: 20,),              
+                  SizedBox(height: 20,),
+                  SizedBox(
+                    height: 60,
+                    width: MediaQuery.of(context).size.width * 0.8,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        LoginService.login(emailController.text, passwordController.text, context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        '로그인',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
             SizedBox(height: 10,),
-            SizedBox(
-              width: MediaQuery.of(context).size.width * 0.8,
-              child: ElevatedButton(
-                onPressed: () {
-                  LoginService.login(emailController.text, passwordController.text, context);
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text(
-                  '로그인',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
+            
             SizedBox(height: 100),
             Text('소셜 로그인', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),),
             SizedBox(height: 30,),

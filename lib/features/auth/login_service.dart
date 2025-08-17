@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../home/home_page.dart';
@@ -25,6 +26,7 @@ class LoginService {
       debugPrint('Firebase Auth userCredential: ${userCredential.user?.uid}');
 
       if (context.mounted && userCredential.user != null) {
+        await isCurrentUserInDatabase(userCredential.user!);
         AppRouter.pushAndRemoveUntil(const HomePage());
       } else {
         debugPrint('Firebase Auth userCredential: ${userCredential.user?.uid}');
@@ -79,6 +81,22 @@ class LoginService {
         );
       },
     );
+  }
+
+  static Future<void> isCurrentUserInDatabase(User currentUser) async {
+    DocumentSnapshot<Map<String, dynamic>> userDoc = await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).get();
+    if (userDoc.exists) {
+      debugPrint('Existing User: ${currentUser.uid}');
+    } else {
+      FirebaseFirestore.instance.collection('users').doc(currentUser.uid).set({
+        'uid': currentUser.uid,
+        'email': currentUser.email,
+        'name': currentUser.displayName,
+        'profileImage': '',
+        'createdAt': DateTime.now(),
+      });
+      debugPrint('New User: ${currentUser.uid}');
+    }
   }
 
   static Future<void> logout(BuildContext context) async {
