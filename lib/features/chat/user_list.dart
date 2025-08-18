@@ -14,12 +14,13 @@ class UserList extends StatefulWidget {
 }
 
 class _UserListState extends State<UserList> {
-  Stream<QuerySnapshot<Map<String, dynamic>>> userInfoStream = FirebaseFirestore.instance.collection('users').snapshots();
+  late Stream<QuerySnapshot<Map<String, dynamic>>> userInfoStream;
 
   @override
   void initState() {
     super.initState();
     // Fireabase 유저 목록 가져오기
+    userInfoStream = FirebaseFirestore.instance.collection('users').snapshots();
   }
 
   @override

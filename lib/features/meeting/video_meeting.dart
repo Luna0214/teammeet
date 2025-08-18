@@ -54,7 +54,6 @@ class _VideoMeetingState extends State<VideoMeeting> {
     }
   }
 
-  // 안전한 setState 호출
   void _safeSetState(VoidCallback fn) {
     if (mounted && !_isDisposed) {
       try {
