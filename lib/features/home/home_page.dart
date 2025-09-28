@@ -25,7 +25,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _bottomNavBar() {
-    
     return BottomNavigationBar(
       type: BottomNavigationBarType.fixed,
       currentIndex: currentPageIndex,
