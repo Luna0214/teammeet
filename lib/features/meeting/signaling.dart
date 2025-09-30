@@ -55,18 +55,18 @@ class Signaling {
       var roomId = roomRef.id;
 
       peerConnection?.onTrack = (RTCTrackEvent event) {
-        debugPrint('Remote Stream 획득: ${event.streams[0]}');
-
-        event.streams[0].getTracks().forEach((track) {
-          debugPrint('Remote Track 추가: $track');
-          remoteStream?.addTrack(track);
-        });
+        if (event.streams.isNotEmpty) {
+          debugPrint('Remote Stream 획득: ${event.streams[0]}');
+          onAddRemoteStream?.call(event.streams[0]);
+          remoteStream = event.streams[0];
+        }
       };
 
       // TODO: Remote Session Description 리스너 설정
       roomRef.snapshots().listen((snapshot) async {
-        Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
-        if (peerConnection?.getRemoteDescription() != null &&
+        final data = snapshot.data() as Map<String, dynamic>?;
+        if (data == null) return;
+        if ((await peerConnection?.getRemoteDescription()) == null &&
             data['answer'] != null) {
           var answer = RTCSessionDescription(
             data['answer']['sdp'],
@@ -179,7 +179,11 @@ class Signaling {
   ) async {
     var stream = await navigator.mediaDevices.getUserMedia({
       'audio': true,
-      'video': true,
+      'video': {
+        'width': {'ideal': 640},
+        'height': {'ideal': 480},
+        'facingMode': 'user',
+      },
     });
 
     localVideo.srcObject = stream;

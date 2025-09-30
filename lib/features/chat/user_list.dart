@@ -32,10 +32,11 @@ class _UserListState extends State<UserList> {
           return const Center(child: CircularProgressIndicator());
         }
         String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
-        List<Map<String, dynamic>> users = snapshot.data!.docs
-            .map((doc) => doc.data())
-            .where((user) => user['uid'] != currentUserId)
-            .toList();
+        List<Map<String, dynamic>> users =
+            snapshot.data!.docs
+                .map((doc) => doc.data())
+                .where((user) => user['uid'] != currentUserId)
+                .toList();
         if (users.isEmpty) {
           return const Center(child: Text('유저 목록이 없습니다.'));
         }
@@ -44,27 +45,40 @@ class _UserListState extends State<UserList> {
           itemCount: users.length,
           itemBuilder: (context, index) {
             return ListTile(
-              title: Text(users[index]['name'] ?? '${users[index]['email'].split('@')[0]}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold,),),
+              title: Text(
+                users[index]['name'] ??
+                    '${users[index]['email'].split('@')[0]}',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               subtitle: Text(users[index]['email'] ?? ''),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
                     onPressed: () {},
-                    icon: Icon(Icons.chat, size: 32, color: Colors.blue,),
+                    icon: Icon(Icons.chat, size: 32, color: Colors.blue),
                   ),
                   IconButton(
                     onPressed: () {
-                      AppRouter.push(VideoMeeting(meetingId: users[index]['uid']));
+                      AppRouter.push(
+                        VideoMeeting(calleeUid: users[index]['uid']),
+                      );
                     },
-                    icon: Icon(Icons.video_camera_front, size: 32, color: Colors.green,),
+                    icon: Icon(
+                      Icons.video_camera_front,
+                      size: 32,
+                      color: Colors.green,
+                    ),
                   ),
                 ],
-              )
+              ),
             );
           },
         );
-      }
+      },
     );
   }
 }
