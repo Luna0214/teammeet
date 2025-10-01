@@ -23,6 +23,25 @@ class Signaling {
     ],
   };
 
+  Future<void> openUserMedia(
+    RTCVideoRenderer localVideo,
+    RTCVideoRenderer remoteVideo,
+  ) async {
+    var stream = await navigator.mediaDevices.getUserMedia({
+      'audio': true,
+      'video': {
+        'width': {'ideal': 640},
+        'height': {'ideal': 480},
+        'facingMode': 'user',
+      },
+    });
+
+    localVideo.srcObject = stream;
+    localStream = stream;
+
+    remoteVideo.srcObject = await createLocalMediaStream('key');
+  }
+
   Future<String> createRoom(RTCVideoRenderer remoteRenderer) async {
     try {
       FirebaseFirestore db = FirebaseFirestore.instance;
@@ -171,25 +190,6 @@ class Signaling {
         });
       });
     }
-  }
-
-  Future<void> openUserMedia(
-    RTCVideoRenderer localVideo,
-    RTCVideoRenderer remoteVideo,
-  ) async {
-    var stream = await navigator.mediaDevices.getUserMedia({
-      'audio': true,
-      'video': {
-        'width': {'ideal': 640},
-        'height': {'ideal': 480},
-        'facingMode': 'user',
-      },
-    });
-
-    localVideo.srcObject = stream;
-    localStream = stream;
-
-    remoteVideo.srcObject = await createLocalMediaStream('key');
   }
 
   Future<void> hangUp(RTCVideoRenderer localVideo) async {

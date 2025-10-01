@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:teammeet/features/meeting/signaling.dart';
+import 'package:teammeet/features/meeting/video_meeting_service.dart';
 
 class VideoMeeting extends StatefulWidget {
   const VideoMeeting({super.key, required this.calleeUid});
@@ -43,7 +44,8 @@ class _VideoMeetingState extends State<VideoMeeting> {
     await signaling.openUserMedia(localRenderer, remoteRenderer);
 
     roomId = await signaling.createRoom(remoteRenderer);
-    // await signaling.joinRoom(roomId!);
+    await VideoMeetingService.startVideoCall(widget.calleeUid);
+
     setState(() {
       roomId = roomId;
     });
