@@ -1,28 +1,34 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:teammeet/core/model/user_model.dart';
 import '../home/home_page.dart';
 import 'login_page.dart';
 import '../../shared/app_router.dart';
 
 class LoginService {
-  static Future<void> login(String email, String password, BuildContext context) async {
+  static Future<void> login(
+    String email,
+    String password,
+    BuildContext context,
+  ) async {
     debugPrint('Firebase Auth email: $email, password: $password');
-    
+
     // 입력값 검증
     if (email.isEmpty || password.isEmpty) {
       showErrorDialog(context, '입력 오류', '이메일과 비밀번호를 모두 입력해주세요.');
       return;
     }
-    
+
     // 이메일 형식 검증
     if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
       showErrorDialog(context, '이메일 형식 오류', '올바른 이메일 형식을 입력해주세요.');
       return;
     }
-    
+
     try {
-      UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(email: email, password: password);
+      UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: password);
       debugPrint('Firebase Auth userCredential: ${userCredential.user?.uid}');
 
       if (context.mounted && userCredential.user != null) {
@@ -42,7 +48,7 @@ class LoginService {
       if (context.mounted) {
         showErrorDialog(context, '오류', '예상치 못한 오류가 발생했습니다: $e');
       }
-    }    
+    }
   }
 
   static String _getErrorMessage(String errorCode) {
@@ -64,12 +70,16 @@ class LoginService {
     }
   }
 
-  static void showErrorDialog(BuildContext context, String title, String message) {
+  static void showErrorDialog(
+    BuildContext context,
+    String title,
+    String message,
+  ) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          icon: const Icon(Icons.error, size: 40, color: Colors.red,),
+          icon: const Icon(Icons.error, size: 40, color: Colors.red),
           title: Text(title),
           content: Text(message),
           actions: [
@@ -84,7 +94,11 @@ class LoginService {
   }
 
   static Future<void> isCurrentUserInDatabase(User currentUser) async {
-    DocumentSnapshot<Map<String, dynamic>> userDoc = await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).get();
+    DocumentSnapshot<Map<String, dynamic>> userDoc =
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUser.uid)
+            .get();
     if (userDoc.exists) {
       debugPrint('Existing User: ${currentUser.uid}');
     } else {
@@ -97,6 +111,15 @@ class LoginService {
       });
       debugPrint('New User: ${currentUser.uid}');
     }
+  }
+
+  static Future<UserModel?> getUserInfo(String uid) async {
+    DocumentSnapshot<Map<String, dynamic>> userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    if (userDoc.exists) {
+      return UserModel.fromJson(userDoc.data()!);
+    }
+    return null;
   }
 
   static Future<void> logout(BuildContext context) async {

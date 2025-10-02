@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:teammeet/core/model/call_model.dart';
 import 'package:teammeet/features/meeting/ringing_page.dart';
-import 'package:teammeet/features/meeting/video_meeting.dart';
 import 'package:teammeet/shared/app_router.dart';
 import '../auth/login_service.dart';
 import '../chat/user_list.dart';
@@ -50,7 +49,7 @@ class _HomePageState extends State<HomePage> {
                 debugPrint('새로운 통화 추가: ${data.toJson()}');
 
                 // 새로운 통화가 추가되었을 때 RingingPage 페이지로 이동
-                AppRouter.push(RingingPage());
+                AppRouter.push(RingingPage(callerUid: data.callerUid));
               }
             });
           },
