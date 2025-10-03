@@ -1,4 +1,5 @@
 class CallModel {
+  final String roomId;
   final String callerUid;
   final String calleeUid;
   String status;
@@ -6,6 +7,7 @@ class CallModel {
   String updatedAt;
 
   CallModel({
+    required this.roomId,
     required this.callerUid,
     required this.calleeUid,
     required this.status,
@@ -15,6 +17,7 @@ class CallModel {
 
   factory CallModel.fromJson(Map<String, dynamic> json) {
     return CallModel(
+      roomId: json['roomId'],
       callerUid: json['callerUid'],
       calleeUid: json['calleeUid'],
       status: json['status'],
@@ -25,6 +28,7 @@ class CallModel {
 
   Map<String, dynamic> toJson() {
     return {
+      'roomId': roomId,
       'callerUid': callerUid,
       'calleeUid': calleeUid,
       'status': status,

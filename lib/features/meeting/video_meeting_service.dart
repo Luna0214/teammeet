@@ -34,9 +34,10 @@ String callStatusToString(CallStatus status) {
 }
 
 class VideoMeetingService {
-  static Future<void> startVideoCall(String receiverUid) async {
+  static Future<void> startVideoCall(String roomId, String receiverUid) async {
     final callsRef = FirebaseFirestore.instance.collection('calls');
     await callsRef.add({
+      'roomId': roomId,
       'callerUid': FirebaseAuth.instance.currentUser?.uid,
       'calleeUid': receiverUid,
       'status': callStatusToString(CallStatus.ringing),

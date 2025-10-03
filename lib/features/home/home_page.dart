@@ -43,15 +43,17 @@ class _HomePageState extends State<HomePage> {
           (snapshot) {
             if (snapshot.docs.isEmpty) return;
 
-            snapshot.docChanges.forEach((change) {
+            for (var change in snapshot.docChanges) {
               if (change.type == DocumentChangeType.added) {
                 CallModel data = CallModel.fromJson(change.doc.data()!);
                 debugPrint('새로운 통화 추가: ${data.toJson()}');
 
                 // 새로운 통화가 추가되었을 때 RingingPage 페이지로 이동
-                AppRouter.push(RingingPage(callerUid: data.callerUid));
+                AppRouter.push(
+                  RingingPage(roomId: data.roomId, callerUid: data.callerUid),
+                );
               }
-            });
+            }
           },
           onError: (error) {
             debugPrint('통화 리스너 에러: $error');

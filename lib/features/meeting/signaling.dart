@@ -98,7 +98,7 @@ class Signaling {
 
       // TODO: Remote ICE candidates 리스너 설정
       roomRef.collection('calleeCandidates').snapshots().listen((snapshot) {
-        snapshot.docChanges.forEach((change) {
+        for (var change in snapshot.docChanges) {
           if (change.type == DocumentChangeType.added) {
             Map<String, dynamic> data =
                 change.doc.data() as Map<String, dynamic>;
@@ -112,7 +112,7 @@ class Signaling {
               ),
             );
           }
-        });
+        }
       });
 
       return roomId;
@@ -174,7 +174,7 @@ class Signaling {
 
       // TODO: Remote ICE candidates 리스너 설정
       roomRef.collection('callerCandidates').snapshots().listen((snapshot) {
-        snapshot.docChanges.forEach((change) {
+        for (var change in snapshot.docChanges) {
           if (change.type == DocumentChangeType.added) {
             Map<String, dynamic> data =
                 change.doc.data() as Map<String, dynamic>;
@@ -187,16 +187,16 @@ class Signaling {
               ),
             );
           }
-        });
+        }
       });
     }
   }
 
   Future<void> hangUp(RTCVideoRenderer localVideo) async {
     List<MediaStreamTrack> tracks = localVideo.srcObject!.getTracks();
-    tracks.forEach((track) {
+    for (var track in tracks) {
       track.stop();
-    });
+    }
 
     if (remoteStream != null) {
       remoteStream!.getTracks().forEach((track) => track.stop());
@@ -207,10 +207,14 @@ class Signaling {
       var db = FirebaseFirestore.instance;
       var roomRef = db.collection('rooms').doc(roomId);
       var calleeCandidates = await roomRef.collection('calleeCandidates').get();
-      calleeCandidates.docs.forEach((doc) => doc.reference.delete());
+      for (var doc in calleeCandidates.docs) {
+        doc.reference.delete();
+      }
 
       var callerCandidates = await roomRef.collection('callerCandidates').get();
-      callerCandidates.docs.forEach((doc) => doc.reference.delete());
+      for (var doc in callerCandidates.docs) {
+        doc.reference.delete();
+      }
 
       roomRef.delete();
     }

@@ -44,28 +44,33 @@ class _VideoMeetingState extends State<VideoMeeting> {
     await signaling.openUserMedia(localRenderer, remoteRenderer);
 
     roomId = await signaling.createRoom(remoteRenderer);
-    await VideoMeetingService.startVideoCall(widget.calleeUid);
 
     setState(() {
       roomId = roomId;
     });
+
+    await VideoMeetingService.startVideoCall(roomId!, widget.calleeUid);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('비디오 미팅')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        centerTitle: true,
+        title: Text('비디오 미팅'),
+      ),
       body: Center(
         child: Column(
           children: [
             Text("Room ID:${roomId ?? 'Loading...'}"),
             Text("caller Receiver: ${widget.calleeUid}"),
-            Container(
+            SizedBox(
               width: 300,
               height: 300,
               child: RTCVideoView(localRenderer),
             ),
-            Container(
+            SizedBox(
               width: 300,
               height: 300,
               child: RTCVideoView(remoteRenderer),

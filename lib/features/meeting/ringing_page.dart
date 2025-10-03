@@ -2,10 +2,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:teammeet/core/model/user_model.dart';
 import 'package:teammeet/features/auth/login_service.dart';
+import 'package:teammeet/features/meeting/signaling.dart';
+import 'package:teammeet/features/meeting/video_meeting.dart';
+import 'package:teammeet/shared/app_router.dart';
 
 class RingingPage extends StatefulWidget {
+  final String roomId;
   final String callerUid;
-  const RingingPage({super.key, required this.callerUid});
+  const RingingPage({super.key, required this.roomId, required this.callerUid});
 
   @override
   State<RingingPage> createState() => _RingingPageState();
@@ -18,6 +22,7 @@ class _RingingPageState extends State<RingingPage> {
   void initState() {
     super.initState();
     initCaller();
+    setState(() {});
   }
 
   void initCaller() async {
@@ -38,16 +43,17 @@ class _RingingPageState extends State<RingingPage> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        centerTitle: true,
         title: Text('비디오 미팅 요청'),
       ),
       body: Column(
         children: [
           Text(
-            '${caller?.name}',
+            caller!.name,
             style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
           ),
           Text(
-            '${caller?.email}',
+            caller!.email,
             style: TextStyle(fontSize: 16, color: Colors.grey),
           ),
           Padding(
@@ -82,8 +88,10 @@ class _RingingPageState extends State<RingingPage> {
                   radius: 45,
                   backgroundColor: Colors.green,
                   child: IconButton(
-                    onPressed: () {
+                    onPressed: () async {
                       debugPrint('call accepted');
+                      await Signaling().joinRoom(widget.roomId);
+                      AppRouter.push(VideoMeeting(calleeUid: widget.callerUid));
                     },
                     icon: Icon(Icons.call, size: 35),
                     color: Colors.white,
