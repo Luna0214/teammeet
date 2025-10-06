@@ -2,8 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:teammeet/core/model/user_model.dart';
 import 'package:teammeet/features/auth/login_service.dart';
-import 'package:teammeet/features/meeting/signaling.dart';
 import 'package:teammeet/features/meeting/video_meeting.dart';
+import 'package:teammeet/features/meeting/video_meeting_service.dart';
 import 'package:teammeet/shared/app_router.dart';
 
 class RingingPage extends StatefulWidget {
@@ -35,6 +35,7 @@ class _RingingPageState extends State<RingingPage> {
           profileImage: '',
           createdAt: Timestamp.now(),
         );
+    setState(() {});
   }
 
   @override
@@ -90,8 +91,14 @@ class _RingingPageState extends State<RingingPage> {
                   child: IconButton(
                     onPressed: () async {
                       debugPrint('call accepted');
-                      await Signaling().joinRoom(widget.roomId);
-                      AppRouter.push(VideoMeeting(calleeUid: widget.callerUid));
+                      await VideoMeetingService.acceptVideoCall(widget.roomId);
+                      AppRouter.push(
+                        VideoMeeting(
+                          calleeUid: widget.callerUid,
+                          isCaller: false,
+                          roomId: widget.roomId,
+                        ),
+                      );
                     },
                     icon: Icon(Icons.call, size: 35),
                     color: Colors.white,
@@ -101,8 +108,10 @@ class _RingingPageState extends State<RingingPage> {
                   radius: 45,
                   backgroundColor: Colors.red,
                   child: IconButton(
-                    onPressed: () {
+                    onPressed: () async {
                       debugPrint('call ended');
+                      await VideoMeetingService.endVideoCall(widget.roomId);
+                      AppRouter.pop();
                     },
                     icon: Icon(Icons.call_end, size: 35),
                     color: Colors.white,

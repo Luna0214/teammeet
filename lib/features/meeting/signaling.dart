@@ -147,12 +147,11 @@ class Signaling {
       };
 
       peerConnection?.onTrack = (RTCTrackEvent event) {
-        debugPrint('Remote Stream 획득: ${event.streams[0]}');
-
-        event.streams[0].getTracks().forEach((track) {
-          debugPrint('Remote Track 추가: $track');
-          remoteStream?.addTrack(track);
-        });
+        if (event.streams.isNotEmpty) {
+          debugPrint('Remote Stream 획득: ${event.streams[0]}');
+          onAddRemoteStream?.call(event.streams[0]);
+          remoteStream = event.streams[0];
+        }
       };
 
       // NOTE: SFP ANSWER 생성

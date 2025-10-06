@@ -64,7 +64,11 @@ class _UserListState extends State<UserList> {
                   IconButton(
                     onPressed: () {
                       AppRouter.push(
-                        VideoMeeting(calleeUid: users[index]['uid']),
+                        VideoMeeting(
+                          calleeUid: users[index]['uid'],
+                          isCaller: true,
+                          roomId: null,
+                        ),
                       );
                     },
                     icon: Icon(

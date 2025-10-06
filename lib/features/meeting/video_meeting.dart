@@ -4,8 +4,15 @@ import 'package:teammeet/features/meeting/signaling.dart';
 import 'package:teammeet/features/meeting/video_meeting_service.dart';
 
 class VideoMeeting extends StatefulWidget {
-  const VideoMeeting({super.key, required this.calleeUid});
+  const VideoMeeting({
+    super.key,
+    required this.calleeUid,
+    required this.isCaller,
+    this.roomId,
+  });
   final String calleeUid;
+  final bool isCaller;
+  final String? roomId;
 
   @override
   State<VideoMeeting> createState() => _VideoMeetingState();
@@ -43,13 +50,23 @@ class _VideoMeetingState extends State<VideoMeeting> {
 
     await signaling.openUserMedia(localRenderer, remoteRenderer);
 
-    roomId = await signaling.createRoom(remoteRenderer);
-
-    setState(() {
-      roomId = roomId;
-    });
-
-    await VideoMeetingService.startVideoCall(roomId!, widget.calleeUid);
+    if (widget.isCaller) {
+      // Caller: create room then create call document
+      final createdRoomId = await signaling.createRoom(remoteRenderer);
+      setState(() {
+        roomId = createdRoomId;
+      });
+      await VideoMeetingService.startVideoCall(createdRoomId, widget.calleeUid);
+    } else {
+      // Callee: join existing room without creating a call document
+      final existingRoomId = widget.roomId;
+      if (existingRoomId != null && existingRoomId.isNotEmpty) {
+        setState(() {
+          roomId = existingRoomId;
+        });
+        await signaling.joinRoom(existingRoomId);
+      }
+    }
   }
 
   @override

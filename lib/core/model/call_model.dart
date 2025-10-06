@@ -1,10 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class CallModel {
   final String roomId;
   final String callerUid;
   final String calleeUid;
   String status;
-  String createdAt;
-  String updatedAt;
+  Timestamp createdAt;
+  Timestamp updatedAt;
 
   CallModel({
     required this.roomId,
