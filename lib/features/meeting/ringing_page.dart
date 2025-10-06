@@ -49,11 +49,11 @@ class _RingingPageState extends State<RingingPage> {
       body: Column(
         children: [
           Text(
-            caller!.name,
+            caller?.name ?? 'Loading...',
             style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
           ),
           Text(
-            caller!.email,
+            caller?.email ?? 'Loading...',
             style: TextStyle(fontSize: 16, color: Colors.grey),
           ),
           Padding(

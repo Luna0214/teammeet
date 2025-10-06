@@ -57,7 +57,7 @@ class Signaling {
         (track) => peerConnection?.addTrack(track, localStream!),
       );
 
-      // TODO: ICE candidate 수집 및 저장
+      // NOTE: ICE candidate 수집 및 저장
       var callerCandidatesCollection = roomRef.collection('callerCandidates');
 
       peerConnection?.onIceCandidate = (RTCIceCandidate candidate) {
@@ -65,7 +65,7 @@ class Signaling {
         callerCandidatesCollection.add(candidate.toMap());
       };
 
-      // TODO: 방 생성
+      // NOTE: 방 생성
       RTCSessionDescription offer = await peerConnection!.createOffer();
       await peerConnection!.setLocalDescription(offer);
 
@@ -81,7 +81,7 @@ class Signaling {
         }
       };
 
-      // TODO: Remote Session Description 리스너 설정
+      // NOTE: Remote Session Description 리스너 설정
       roomRef.snapshots().listen((snapshot) async {
         final data = snapshot.data() as Map<String, dynamic>?;
         if (data == null) return;
@@ -96,7 +96,7 @@ class Signaling {
         }
       });
 
-      // TODO: Remote ICE candidates 리스너 설정
+      // NOTE: Remote ICE candidates 리스너 설정
       roomRef.collection('calleeCandidates').snapshots().listen((snapshot) {
         for (var change in snapshot.docChanges) {
           if (change.type == DocumentChangeType.added) {
@@ -139,7 +139,7 @@ class Signaling {
         (track) => peerConnection?.addTrack(track, localStream!),
       );
 
-      // TODO: ICE candidates 수집
+      // NOTE: ICE candidates 수집
       var calleeCandidatesCollection = roomRef.collection('calleeCandidates');
       peerConnection?.onIceCandidate = (RTCIceCandidate candidate) {
         debugPrint('Candidate 획득: ${candidate.toMap()}');
@@ -155,7 +155,7 @@ class Signaling {
         });
       };
 
-      // TODO: SFP ANSWER 생성
+      // NOTE: SFP ANSWER 생성
       var data = roomSnapshot.data() as Map<String, dynamic>;
       var offer = data['offer'];
       await peerConnection?.setRemoteDescription(
@@ -172,7 +172,7 @@ class Signaling {
 
       await roomRef.update(roomWithAnswer);
 
-      // TODO: Remote ICE candidates 리스너 설정
+      // NOTE: Remote ICE candidates 리스너 설정
       roomRef.collection('callerCandidates').snapshots().listen((snapshot) {
         for (var change in snapshot.docChanges) {
           if (change.type == DocumentChangeType.added) {
