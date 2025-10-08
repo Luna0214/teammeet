@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:teammeet/core/model/user_model.dart';
 import '../home/home_page.dart';
-import 'login_page.dart';
 import '../../shared/app_router.dart';
 
 class LoginService {
@@ -12,7 +11,7 @@ class LoginService {
     String password,
     BuildContext context,
   ) async {
-    debugPrint('Firebase Auth email: $email, password: $password');
+    // debugPrint('Firebase Auth email: $email, password: $password');
 
     // 입력값 검증
     if (email.isEmpty || password.isEmpty) {
@@ -29,13 +28,13 @@ class LoginService {
     try {
       UserCredential userCredential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(email: email, password: password);
-      debugPrint('Firebase Auth userCredential: ${userCredential.user?.uid}');
+      //debugPrint('Firebase Auth userCredential: ${userCredential.user?.uid}');
 
       if (context.mounted && userCredential.user != null) {
         await isCurrentUserInDatabase(userCredential.user!);
         AppRouter.pushAndRemoveUntil(const HomePage());
       } else {
-        debugPrint('Firebase Auth userCredential: ${userCredential.user?.uid}');
+        //debugPrint('Firebase Auth userCredential: ${userCredential.user?.uid}');
       }
     } on FirebaseAuthException catch (e) {
       debugPrint('Firebase Auth error: ${e.code} - ${e.message}');
@@ -100,7 +99,7 @@ class LoginService {
             .doc(currentUser.uid)
             .get();
     if (userDoc.exists) {
-      debugPrint('Existing User: ${currentUser.uid}');
+      // debugPrint('Existing User: ${currentUser.uid}');
     } else {
       FirebaseFirestore.instance.collection('users').doc(currentUser.uid).set({
         'uid': currentUser.uid,
@@ -109,7 +108,7 @@ class LoginService {
         'profileImage': '',
         'createdAt': DateTime.now(),
       });
-      debugPrint('New User: ${currentUser.uid}');
+      // debugPrint('New User: ${currentUser.uid}');
     }
   }
 
@@ -122,19 +121,13 @@ class LoginService {
     return null;
   }
 
-  static Future<void> logout(BuildContext context) async {
-    await FirebaseAuth.instance.signOut();
-
-    User? user = FirebaseAuth.instance.currentUser;
-
-    if (user != null) {
-      debugPrint('Logout Failed User: ${user.uid}');
-    } else {
-      debugPrint('User Logout Successfully');
-    }
-
-    if (context.mounted) {
-      AppRouter.pushAndRemoveUntil(LoginPage());
+  static Future<void> logout() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (e) {
+      debugPrint('로그아웃 중 오류 발생: $e');
+      // 재시도
+      await FirebaseAuth.instance.signOut();
     }
   }
 }

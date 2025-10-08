@@ -7,6 +7,7 @@ import 'package:teammeet/core/model/call_model.dart';
 import 'package:teammeet/features/meeting/ringing_page.dart';
 import 'package:teammeet/shared/app_router.dart';
 import '../auth/login_service.dart';
+import '../auth/login_page.dart';
 import '../chat/user_list.dart';
 import '../chat/chatroom_list.dart';
 
@@ -29,7 +30,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
-    _incomingcallSubscription?.cancel();
+    _incomingcallSubscription = null;
     super.dispose();
   }
 
@@ -116,7 +117,17 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: Colors.blue,
         actions: [
           IconButton(
-            onPressed: () => LoginService.logout(context),
+            onPressed: () async {
+              try {
+                await _incomingcallSubscription?.cancel();
+                await LoginService.logout();
+              } catch (e) {
+                debugPrint('로그아웃 중 오류: $e');
+              }
+              if (mounted) {
+                AppRouter.pushAndRemoveUntil(LoginPage());
+              }
+            },
             icon: const Icon(Icons.logout, color: Colors.white),
           ),
         ],

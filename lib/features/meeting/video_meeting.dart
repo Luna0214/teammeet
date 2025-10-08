@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:teammeet/features/home/home_page.dart';
 import 'package:teammeet/features/meeting/signaling.dart';
 import 'package:teammeet/features/meeting/video_meeting_service.dart';
+import 'package:teammeet/shared/app_router.dart';
+import 'package:teammeet/shared/widgets/toggle_button.dart';
 
 class VideoMeeting extends StatefulWidget {
   const VideoMeeting({
@@ -24,6 +27,7 @@ class _VideoMeetingState extends State<VideoMeeting> {
   RTCVideoRenderer remoteRenderer = RTCVideoRenderer();
   String? roomId;
   TextEditingController roomIdController = TextEditingController(text: '');
+  bool isConnected = false;
 
   @override
   void initState() {
@@ -42,6 +46,13 @@ class _VideoMeetingState extends State<VideoMeeting> {
     await localRenderer.initialize();
     await remoteRenderer.initialize();
 
+    // 연결 상태 변화 콜백 설정
+    signaling.onConnectionStatusChanged = (bool connected) {
+      setState(() {
+        isConnected = connected;
+      });
+    };
+
     signaling.onAddRemoteStream = (MediaStream stream) {
       setState(() {
         remoteRenderer.srcObject = stream;
@@ -51,14 +62,12 @@ class _VideoMeetingState extends State<VideoMeeting> {
     await signaling.openUserMedia(localRenderer, remoteRenderer);
 
     if (widget.isCaller) {
-      // Caller: create room then create call document
       final createdRoomId = await signaling.createRoom(remoteRenderer);
       setState(() {
         roomId = createdRoomId;
       });
       await VideoMeetingService.startVideoCall(createdRoomId, widget.calleeUid);
     } else {
-      // Callee: join existing room without creating a call document
       final existingRoomId = widget.roomId;
       if (existingRoomId != null && existingRoomId.isNotEmpty) {
         setState(() {
@@ -81,22 +90,118 @@ class _VideoMeetingState extends State<VideoMeeting> {
         child: Column(
           children: [
             Text("Room ID:${roomId ?? 'Loading...'}"),
-            Text("caller Receiver: ${widget.calleeUid}"),
-            SizedBox(
-              width: 300,
-              height: 300,
-              child: RTCVideoView(localRenderer),
+
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // 로컬 비디오 (내 화면)
+                  SizedBox(
+                    width: 300,
+                    height: 300,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: RTCVideoView(localRenderer),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  // 원격 비디오 (상대방 화면)
+                  SizedBox(
+                    width: 300,
+                    height: 300,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child:
+                            isConnected
+                                ? RTCVideoView(remoteRenderer)
+                                : Container(
+                                  color: Colors.grey.shade200,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.videocam_off,
+                                        size: 48,
+                                        color: Colors.grey.shade400,
+                                      ),
+                                      SizedBox(height: 8),
+                                      Text(
+                                        isConnected ? '연결됨' : '연결 대기 중...',
+                                        style: TextStyle(
+                                          color: Colors.grey.shade600,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            SizedBox(
-              width: 300,
-              height: 300,
-              child: RTCVideoView(remoteRenderer),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                signaling.hangUp(localRenderer);
-              },
-              child: Text('Hang Up'),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  // 비디오 켜기/끄기
+                  ToggleButton(
+                    iconOn: Icons.videocam,
+                    iconOff: Icons.videocam_off,
+                    onFunction: () {},
+                    offFunction: () {},
+                  ),
+                  // 오디오 켜기/끄기
+                  ToggleButton(
+                    iconOn: Icons.mic,
+                    iconOff: Icons.mic_off,
+                    onFunction: () {},
+                    offFunction: () {},
+                  ),
+                  IconButton(
+                    onPressed: () async {
+                      try {
+                        debugPrint('통화 종료 버튼 클릭');
+
+                        // WebRTC 연결 정리
+                        await signaling.hangUp(localRenderer);
+                        debugPrint('WebRTC 연결 정리 완료');
+
+                        // 비디오 미팅 서비스 종료
+                        await VideoMeetingService.endVideoCall(roomId ?? '');
+                        debugPrint('비디오 미팅 서비스 종료 완료');
+
+                        // HomePage로 이동
+                        if (mounted) {
+                          AppRouter.pushAndRemoveUntil(HomePage());
+                        }
+                      } catch (e) {
+                        debugPrint('통화 종료 중 오류 발생: $e');
+
+                        // 오류가 발생해도 HomePage로 이동
+                        if (mounted) {
+                          AppRouter.pushAndRemoveUntil(HomePage());
+                        }
+                      }
+                    },
+                    icon: Icon(Icons.call_end),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

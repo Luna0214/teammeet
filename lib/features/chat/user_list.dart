@@ -19,7 +19,7 @@ class _UserListState extends State<UserList> {
   @override
   void initState() {
     super.initState();
-    // Fireabase 유저 목록 가져오기
+    // Fireabase 유저 목록 가져오기 (차후 친구목록으로 대체)
     userInfoStream = FirebaseFirestore.instance.collection('users').snapshots();
   }
 
@@ -58,7 +58,9 @@ class _UserListState extends State<UserList> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      debugPrint('채팅 버튼 클릭');
+                    },
                     icon: Icon(Icons.chat, size: 32, color: Colors.blue),
                   ),
                   IconButton(

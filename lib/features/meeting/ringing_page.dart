@@ -90,7 +90,6 @@ class _RingingPageState extends State<RingingPage> {
                   backgroundColor: Colors.green,
                   child: IconButton(
                     onPressed: () async {
-                      debugPrint('call accepted');
                       await VideoMeetingService.acceptVideoCall(widget.roomId);
                       AppRouter.push(
                         VideoMeeting(
@@ -109,7 +108,6 @@ class _RingingPageState extends State<RingingPage> {
                   backgroundColor: Colors.red,
                   child: IconButton(
                     onPressed: () async {
-                      debugPrint('call ended');
                       await VideoMeetingService.endVideoCall(widget.roomId);
                       AppRouter.pop();
                     },

@@ -1,4 +1,4 @@
-import 'dart:convert';
+import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +11,11 @@ class Signaling {
   String? roomId;
   String? currentRoomText;
   Function(MediaStream stream)? onAddRemoteStream;
+  Function(bool isConnected)? onConnectionStatusChanged;
+
+  StreamSubscription? _remoteSessionDescriptionSubscription;
+  StreamSubscription? _calleeCandidatesSubscription;
+  StreamSubscription? _callerCandidatesSubscription;
 
   Map<String, dynamic> configuration = {
     'iceServers': [
@@ -27,7 +32,7 @@ class Signaling {
     RTCVideoRenderer localVideo,
     RTCVideoRenderer remoteVideo,
   ) async {
-    var stream = await navigator.mediaDevices.getUserMedia({
+    MediaStream stream = await navigator.mediaDevices.getUserMedia({
       'audio': true,
       'video': {
         'width': {'ideal': 640},
@@ -61,7 +66,7 @@ class Signaling {
       var callerCandidatesCollection = roomRef.collection('callerCandidates');
 
       peerConnection?.onIceCandidate = (RTCIceCandidate candidate) {
-        debugPrint('Candidate 획득: ${candidate.toMap()}');
+        // debugPrint('Candidate 획득: ${candidate.toMap()}');
         callerCandidatesCollection.add(candidate.toMap());
       };
 
@@ -75,14 +80,16 @@ class Signaling {
 
       peerConnection?.onTrack = (RTCTrackEvent event) {
         if (event.streams.isNotEmpty) {
-          debugPrint('Remote Stream 획득: ${event.streams[0]}');
+          //debugPrint('Remote Stream 획득: ${event.streams[0]}');
           onAddRemoteStream?.call(event.streams[0]);
           remoteStream = event.streams[0];
         }
       };
 
       // NOTE: Remote Session Description 리스너 설정
-      roomRef.snapshots().listen((snapshot) async {
+      _remoteSessionDescriptionSubscription = roomRef.snapshots().listen((
+        snapshot,
+      ) async {
         final data = snapshot.data() as Map<String, dynamic>?;
         if (data == null) return;
         if ((await peerConnection?.getRemoteDescription()) == null &&
@@ -97,23 +104,26 @@ class Signaling {
       });
 
       // NOTE: Remote ICE candidates 리스너 설정
-      roomRef.collection('calleeCandidates').snapshots().listen((snapshot) {
-        for (var change in snapshot.docChanges) {
-          if (change.type == DocumentChangeType.added) {
-            Map<String, dynamic> data =
-                change.doc.data() as Map<String, dynamic>;
-            debugPrint('새로운 Remote Candidate 획득: ${jsonEncode(data)}');
+      _calleeCandidatesSubscription = roomRef
+          .collection('calleeCandidates')
+          .snapshots()
+          .listen((snapshot) {
+            for (var change in snapshot.docChanges) {
+              if (change.type == DocumentChangeType.added) {
+                Map<String, dynamic> data =
+                    change.doc.data() as Map<String, dynamic>;
+                //debugPrint('새로운 Remote Candidate 획득: ${jsonEncode(data)}');
 
-            peerConnection!.addCandidate(
-              RTCIceCandidate(
-                data['candidate'],
-                data['sdpMid'],
-                data['sdpMLineIndex'],
-              ),
-            );
-          }
-        }
-      });
+                peerConnection!.addCandidate(
+                  RTCIceCandidate(
+                    data['candidate'],
+                    data['sdpMid'],
+                    data['sdpMLineIndex'],
+                  ),
+                );
+              }
+            }
+          });
 
       return roomId;
     } catch (e) {
@@ -172,56 +182,108 @@ class Signaling {
       await roomRef.update(roomWithAnswer);
 
       // NOTE: Remote ICE candidates 리스너 설정
-      roomRef.collection('callerCandidates').snapshots().listen((snapshot) {
-        for (var change in snapshot.docChanges) {
-          if (change.type == DocumentChangeType.added) {
-            Map<String, dynamic> data =
-                change.doc.data() as Map<String, dynamic>;
-            debugPrint('새로운 Remote Candidate 획득: ${jsonEncode(data)}');
-            peerConnection!.addCandidate(
-              RTCIceCandidate(
-                data['candidate'],
-                data['sdpMid'],
-                data['sdpMLineIndex'],
-              ),
-            );
-          }
-        }
-      });
+      _callerCandidatesSubscription = roomRef
+          .collection('callerCandidates')
+          .snapshots()
+          .listen((snapshot) {
+            for (var change in snapshot.docChanges) {
+              if (change.type == DocumentChangeType.added) {
+                Map<String, dynamic> data =
+                    change.doc.data() as Map<String, dynamic>;
+                //debugPrint('새로운 Remote Candidate 획득: ${jsonEncode(data)}');
+                peerConnection!.addCandidate(
+                  RTCIceCandidate(
+                    data['candidate'],
+                    data['sdpMid'],
+                    data['sdpMLineIndex'],
+                  ),
+                );
+              }
+            }
+          });
     }
   }
 
   Future<void> hangUp(RTCVideoRenderer localVideo) async {
-    List<MediaStreamTrack> tracks = localVideo.srcObject!.getTracks();
-    for (var track in tracks) {
-      track.stop();
-    }
+    try {
+      // 리스너 정리
+      _remoteSessionDescriptionSubscription?.cancel();
+      _remoteSessionDescriptionSubscription = null;
+      _calleeCandidatesSubscription?.cancel();
+      _calleeCandidatesSubscription = null;
+      _callerCandidatesSubscription?.cancel();
+      _callerCandidatesSubscription = null;
 
-    if (remoteStream != null) {
-      remoteStream!.getTracks().forEach((track) => track.stop());
-    }
-    if (peerConnection != null) peerConnection!.close();
-
-    if (roomId != null) {
-      var db = FirebaseFirestore.instance;
-      var roomRef = db.collection('rooms').doc(roomId);
-      var calleeCandidates = await roomRef.collection('calleeCandidates').get();
-      for (var doc in calleeCandidates.docs) {
-        doc.reference.delete();
+      // 로컬 비디오 트랙 정리
+      if (localVideo.srcObject != null) {
+        List<MediaStreamTrack> tracks = localVideo.srcObject!.getTracks();
+        for (var track in tracks) {
+          track.stop();
+        }
+        debugPrint('로컬 비디오 트랙 정리 완료');
       }
 
-      var callerCandidates = await roomRef.collection('callerCandidates').get();
-      for (var doc in callerCandidates.docs) {
-        doc.reference.delete();
+      // 원격 스트림 정리
+      if (remoteStream != null) {
+        remoteStream!.getTracks().forEach((track) => track.stop());
+        debugPrint('원격 스트림 정리 완료');
       }
 
-      roomRef.delete();
-    }
+      // PeerConnection 정리
+      if (peerConnection != null) {
+        await peerConnection!.close();
+        peerConnection = null;
+        debugPrint('PeerConnection 정리 완료');
+      }
 
-    localStream!.dispose();
-    remoteStream?.dispose();
+      // Firestore 방 데이터 정리
+      if (roomId != null) {
+        try {
+          var db = FirebaseFirestore.instance;
+          var roomRef = db.collection('rooms').doc(roomId);
+
+          // Callee candidates 정리
+          var calleeCandidates =
+              await roomRef.collection('calleeCandidates').get();
+          for (var doc in calleeCandidates.docs) {
+            await doc.reference.delete();
+          }
+
+          // Caller candidates 정리
+          var callerCandidates =
+              await roomRef.collection('callerCandidates').get();
+          for (var doc in callerCandidates.docs) {
+            await doc.reference.delete();
+          }
+
+          // 방 삭제
+          await roomRef.delete();
+          debugPrint('Firestore 방 데이터 정리 완료');
+        } catch (e) {
+          debugPrint('Firestore 정리 중 오류: $e');
+        }
+      }
+
+      // 스트림 리소스 정리
+      if (localStream != null) {
+        localStream!.dispose();
+        localStream = null;
+        debugPrint('로컬 스트림 정리 완료');
+      }
+
+      if (remoteStream != null) {
+        remoteStream!.dispose();
+        remoteStream = null;
+        debugPrint('원격 스트림 정리 완료');
+      }
+
+      debugPrint('통화 종료 완료');
+    } catch (e) {
+      debugPrint('통화 종료 중 오류 발생: $e');
+    }
   }
 
+  // NOTE: 상태 변화 모니터링: 설정 기능 등 추가 예정
   void registerPeerConnectionListeners() {
     peerConnection?.onIceGatheringState = (RTCIceGatheringState state) {
       debugPrint('ICE Gathering 상태 변화: $state');
@@ -229,6 +291,15 @@ class Signaling {
 
     peerConnection?.onConnectionState = (RTCPeerConnectionState state) {
       debugPrint('Connection 상태 변화: $state');
+      // 연결 상태에 따른 콜백 호출
+      if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
+        onConnectionStatusChanged?.call(true);
+      } else if (state ==
+              RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
+          state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
+          state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
+        onConnectionStatusChanged?.call(false);
+      }
     };
 
     peerConnection?.onSignalingState = (RTCSignalingState state) {
@@ -237,12 +308,24 @@ class Signaling {
 
     peerConnection?.onIceConnectionState = (RTCIceConnectionState state) {
       debugPrint('ICE 연결상태 변화: $state');
+      // ICE 연결 상태에 따른 콜백 호출
+      if (state == RTCIceConnectionState.RTCIceConnectionStateConnected ||
+          state == RTCIceConnectionState.RTCIceConnectionStateCompleted) {
+        onConnectionStatusChanged?.call(true);
+      } else if (state ==
+              RTCIceConnectionState.RTCIceConnectionStateDisconnected ||
+          state == RTCIceConnectionState.RTCIceConnectionStateFailed ||
+          state == RTCIceConnectionState.RTCIceConnectionStateClosed) {
+        onConnectionStatusChanged?.call(false);
+      }
     };
 
     peerConnection?.onAddStream = (MediaStream stream) {
       debugPrint('Stream 추가: $stream');
       onAddRemoteStream?.call(stream);
       remoteStream = stream;
+      // 원격 스트림이 추가되면 연결됨으로 간주
+      onConnectionStatusChanged?.call(true);
     };
   }
 }
