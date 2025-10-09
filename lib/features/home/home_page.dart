@@ -30,6 +30,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    _incomingcallSubscription?.cancel();
     _incomingcallSubscription = null;
     super.dispose();
   }

@@ -37,6 +37,8 @@ class _VideoMeetingState extends State<VideoMeeting> {
 
   @override
   void dispose() {
+    signaling.onConnectionStatusChanged = null;
+    signaling.onAddRemoteStream = null;
     localRenderer.dispose();
     remoteRenderer.dispose();
     super.dispose();
@@ -46,14 +48,15 @@ class _VideoMeetingState extends State<VideoMeeting> {
     await localRenderer.initialize();
     await remoteRenderer.initialize();
 
-    // 연결 상태 변화 콜백 설정
     signaling.onConnectionStatusChanged = (bool connected) {
+      if (!mounted) return;
       setState(() {
         isConnected = connected;
       });
     };
 
     signaling.onAddRemoteStream = (MediaStream stream) {
+      if (!mounted) return;
       setState(() {
         remoteRenderer.srcObject = stream;
       });
@@ -92,7 +95,7 @@ class _VideoMeetingState extends State<VideoMeeting> {
             Text("Room ID:${roomId ?? 'Loading...'}"),
 
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(16.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -102,6 +105,7 @@ class _VideoMeetingState extends State<VideoMeeting> {
                     height: 300,
                     child: Container(
                       decoration: BoxDecoration(
+                        color: Colors.black,
                         border: Border.all(color: Colors.grey),
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -118,6 +122,7 @@ class _VideoMeetingState extends State<VideoMeeting> {
                     height: 300,
                     child: Container(
                       decoration: BoxDecoration(
+                        color: Colors.black,
                         border: Border.all(color: Colors.grey),
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -127,20 +132,20 @@ class _VideoMeetingState extends State<VideoMeeting> {
                             isConnected
                                 ? RTCVideoView(remoteRenderer)
                                 : Container(
-                                  color: Colors.grey.shade200,
+                                  color: Colors.black,
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Icon(
                                         Icons.videocam_off,
                                         size: 48,
-                                        color: Colors.grey.shade400,
+                                        color: Colors.white,
                                       ),
                                       SizedBox(height: 8),
                                       Text(
-                                        isConnected ? '연결됨' : '연결 대기 중...',
+                                        isConnected ? '연결됨' : '연결 대기',
                                         style: TextStyle(
-                                          color: Colors.grey.shade600,
+                                          color: Colors.white,
                                           fontSize: 14,
                                         ),
                                       ),
