@@ -5,6 +5,7 @@ import 'package:teammeet/features/auth/login_service.dart';
 import 'package:teammeet/features/meeting/video_meeting.dart';
 import 'package:teammeet/features/meeting/video_meeting_service.dart';
 import 'package:teammeet/shared/app_router.dart';
+import 'package:just_audio/just_audio.dart';
 
 class RingingPage extends StatefulWidget {
   final String roomId;
@@ -17,12 +18,20 @@ class RingingPage extends StatefulWidget {
 
 class _RingingPageState extends State<RingingPage> {
   UserModel? caller;
+  AudioPlayer player = AudioPlayer();
 
   @override
   void initState() {
     super.initState();
     initCaller();
+    _playRingSound();
     setState(() {});
+  }
+
+  @override
+  void dispose() {
+    player.dispose();
+    super.dispose();
   }
 
   void initCaller() async {
@@ -36,6 +45,12 @@ class _RingingPageState extends State<RingingPage> {
           createdAt: Timestamp.now(),
         );
     setState(() {});
+  }
+
+  Future<void> _playRingSound() async {
+    await player.setAsset('assets/sounds/video_call_ring.mp3');
+    await player.setLoopMode(LoopMode.one);
+    player.play();
   }
 
   @override
@@ -90,6 +105,7 @@ class _RingingPageState extends State<RingingPage> {
                   backgroundColor: Colors.green,
                   child: IconButton(
                     onPressed: () async {
+                      await player.stop();
                       await VideoMeetingService.acceptVideoCall(widget.roomId);
                       AppRouter.push(
                         VideoMeeting(
@@ -108,6 +124,7 @@ class _RingingPageState extends State<RingingPage> {
                   backgroundColor: Colors.red,
                   child: IconButton(
                     onPressed: () async {
+                      await player.stop();
                       await VideoMeetingService.endVideoCall(widget.roomId);
                       AppRouter.pop();
                     },
