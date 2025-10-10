@@ -1,14 +1,18 @@
 # TeamMeet(Still in construction)
 
-A cross-platform real-time communication app built with Flutter and WebRTC.
+WebRTC 및 Firebase를 기반 실시간 화상통화 및 채팅 MVP 어플리케이션.
+
+## How to demo?
+
+- Firebase 인증 파일(IOS, Android, Web) 세팅 후 실행
+- 기존 파일 보안 목적상 gitignore에 포함
 
 ## 🚀 Features(예정)
 
-- 🔒 Firebase Auth 기반 로그인
-- 📞 WebRTC 기반 화상/음성 통화
+- 🔒 Firebase Auth 기반 로그인(완료)
+- 📞 WebRTC 기반 화상/음성 통화(화상 통화 작업 중...)
 - 💬 실시간 채팅 (Firebase/Socket)
-- 👥 그룹방 생성 및 초대
-- 📱 멀티 플랫폼 지원 (iOS, Android, Web, Windows, macOS)
+- 📱 멀티 플랫폼 지원 (iOS, Android, Web)
 
 ## 🛠 Tech Stack
 
