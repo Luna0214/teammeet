@@ -83,73 +83,69 @@ class _VideoMeetingState extends State<VideoMeeting> {
   }
 
   Widget _mobileBody() {
-    return SizedBox(
-      width: MediaQuery.of(context).size.width,
-      height: MediaQuery.of(context).size.height,
-      child: Stack(
-        children: [
-          // 메인 비디오 (원격 렌더러)
-          Container(
+    return Stack(
+      children: [
+        // 메인 비디오 (원격 렌더러)
+        Positioned.fill(
+          child: Container(
+            color: Colors.black,
+            child:
+                isConnected
+                    ? RTCVideoView(
+                      remoteRenderer,
+                      filterQuality: FilterQuality.medium,
+                      objectFit:
+                          RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                    )
+                    : Container(
+                      color: Colors.black,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.videocam_off,
+                            size: 48,
+                            color: Colors.white,
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            isConnected ? '연결됨' : '연결 대기',
+                            style: TextStyle(color: Colors.white, fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    ),
+          ),
+        ),
+        // 로컬 비디오 작은 박스
+        Positioned(
+          bottom: 32,
+          right: 16,
+          child: Container(
+            width: 120,
+            height: 160,
             decoration: BoxDecoration(
               color: Colors.black,
-              border: Border.all(color: Colors.grey),
+              border: Border.all(color: Colors.white, width: 2),
               borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child:
-                  isConnected
-                      ? RTCVideoView(remoteRenderer)
-                      : Container(
-                        color: Colors.black,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.videocam_off,
-                              size: 48,
-                              color: Colors.white,
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              isConnected ? '연결됨' : '연결 대기',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-            ),
-          ),
-          // 로컬 비디오 작은 박스
-          Positioned(
-            bottom: 32,
-            right: 16,
-            child: Container(
-              width: 120,
-              height: 160,
-              decoration: BoxDecoration(
-                color: Colors.black,
-                border: Border.all(color: Colors.white, width: 2),
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: RTCVideoView(localRenderer),
+              borderRadius: BorderRadius.circular(6),
+              child: RTCVideoView(
+                localRenderer,
+                objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -158,7 +154,6 @@ class _VideoMeetingState extends State<VideoMeeting> {
       child: Column(
         children: [
           Text("Room ID:${roomId ?? 'Loading...'}"),
-
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Row(
@@ -167,7 +162,7 @@ class _VideoMeetingState extends State<VideoMeeting> {
                 // 로컬 비디오 (내 화면)
                 SizedBox(
                   width: 300,
-                  height: 300,
+                  height: 400,
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.black,
@@ -176,7 +171,12 @@ class _VideoMeetingState extends State<VideoMeeting> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: RTCVideoView(localRenderer),
+                      child: RTCVideoView(
+                        localRenderer,
+                        filterQuality: FilterQuality.high,
+                        objectFit:
+                            RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                      ),
                     ),
                   ),
                 ),
@@ -184,7 +184,7 @@ class _VideoMeetingState extends State<VideoMeeting> {
                 // 원격 비디오 (상대방 화면)
                 SizedBox(
                   width: 300,
-                  height: 300,
+                  height: 400,
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.black,
@@ -195,7 +195,13 @@ class _VideoMeetingState extends State<VideoMeeting> {
                       borderRadius: BorderRadius.circular(8),
                       child:
                           isConnected
-                              ? RTCVideoView(remoteRenderer)
+                              ? RTCVideoView(
+                                remoteRenderer,
+                                filterQuality: FilterQuality.high,
+                                objectFit:
+                                    RTCVideoViewObjectFit
+                                        .RTCVideoViewObjectFitCover,
+                              )
                               : Container(
                                 color: Colors.black,
                                 child: Column(

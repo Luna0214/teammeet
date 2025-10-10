@@ -35,8 +35,8 @@ class Signaling {
     MediaStream stream = await navigator.mediaDevices.getUserMedia({
       'audio': true,
       'video': {
-        'width': {'ideal': 300},
-        'height': {'ideal': 300},
+        'width': {'ideal': 1200},
+        'height': {'ideal': 1600},
         'facingMode': 'user',
       },
     });
