@@ -100,6 +100,7 @@ class LoginService {
             .get();
     if (userDoc.exists) {
       // debugPrint('Existing User: ${currentUser.uid}');
+      return;
     } else {
       FirebaseFirestore.instance.collection('users').doc(currentUser.uid).set({
         'uid': currentUser.uid,

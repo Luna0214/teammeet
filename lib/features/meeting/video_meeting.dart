@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:teammeet/features/home/home_page.dart';
@@ -81,6 +82,209 @@ class _VideoMeetingState extends State<VideoMeeting> {
     }
   }
 
+  Widget _mobileBody() {
+    return SizedBox(
+      width: MediaQuery.of(context).size.width,
+      height: MediaQuery.of(context).size.height,
+      child: Stack(
+        children: [
+          // 메인 비디오 (원격 렌더러)
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.black,
+              border: Border.all(color: Colors.grey),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child:
+                  isConnected
+                      ? RTCVideoView(remoteRenderer)
+                      : Container(
+                        color: Colors.black,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.videocam_off,
+                              size: 48,
+                              color: Colors.white,
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              isConnected ? '연결됨' : '연결 대기',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+            ),
+          ),
+          // 로컬 비디오 작은 박스
+          Positioned(
+            bottom: 32,
+            right: 16,
+            child: Container(
+              width: 120,
+              height: 160,
+              decoration: BoxDecoration(
+                color: Colors.black,
+                border: Border.all(color: Colors.white, width: 2),
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: RTCVideoView(localRenderer),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _webBody() {
+    return Center(
+      child: Column(
+        children: [
+          Text("Room ID:${roomId ?? 'Loading...'}"),
+
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // 로컬 비디오 (내 화면)
+                SizedBox(
+                  width: 300,
+                  height: 300,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: RTCVideoView(localRenderer),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 16),
+                // 원격 비디오 (상대방 화면)
+                SizedBox(
+                  width: 300,
+                  height: 300,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child:
+                          isConnected
+                              ? RTCVideoView(remoteRenderer)
+                              : Container(
+                                color: Colors.black,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.videocam_off,
+                                      size: 48,
+                                      color: Colors.white,
+                                    ),
+                                    SizedBox(height: 8),
+                                    Text(
+                                      isConnected ? '연결됨' : '연결 대기',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: _callControlButton(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _callControlButton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          // 비디오 켜기/끄기
+          ToggleButton(
+            iconOn: Icons.videocam,
+            iconOff: Icons.videocam_off,
+            onFunction: () {},
+            offFunction: () {},
+          ),
+          // 오디오 켜기/끄기
+          ToggleButton(
+            iconOn: Icons.mic,
+            iconOff: Icons.mic_off,
+            onFunction: () {},
+            offFunction: () {},
+          ),
+          IconButton(
+            onPressed: () async {
+              try {
+                debugPrint('통화 종료 버튼 클릭');
+
+                // WebRTC 연결 정리
+                await signaling.hangUp(localRenderer);
+                debugPrint('WebRTC 연결 정리 완료');
+
+                // 비디오 미팅 서비스 종료
+                await VideoMeetingService.endVideoCall(roomId ?? '');
+                debugPrint('비디오 미팅 서비스 종료 완료');
+
+                // HomePage로 이동
+                if (mounted) {
+                  AppRouter.pushAndRemoveUntil(HomePage());
+                }
+              } catch (e) {
+                debugPrint('통화 종료 중 오류 발생: $e');
+
+                // 오류가 발생해도 HomePage로 이동
+                if (mounted) {
+                  AppRouter.pushAndRemoveUntil(HomePage());
+                }
+              }
+            },
+            icon: Icon(Icons.call_end),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -89,128 +293,8 @@ class _VideoMeetingState extends State<VideoMeeting> {
         centerTitle: true,
         title: Text('비디오 미팅'),
       ),
-      body: Center(
-        child: Column(
-          children: [
-            Text("Room ID:${roomId ?? 'Loading...'}"),
-
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // 로컬 비디오 (내 화면)
-                  SizedBox(
-                    width: 300,
-                    height: 300,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        border: Border.all(color: Colors.grey),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: RTCVideoView(localRenderer),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 16),
-                  // 원격 비디오 (상대방 화면)
-                  SizedBox(
-                    width: 300,
-                    height: 300,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        border: Border.all(color: Colors.grey),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child:
-                            isConnected
-                                ? RTCVideoView(remoteRenderer)
-                                : Container(
-                                  color: Colors.black,
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.videocam_off,
-                                        size: 48,
-                                        color: Colors.white,
-                                      ),
-                                      SizedBox(height: 8),
-                                      Text(
-                                        isConnected ? '연결됨' : '연결 대기',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  // 비디오 켜기/끄기
-                  ToggleButton(
-                    iconOn: Icons.videocam,
-                    iconOff: Icons.videocam_off,
-                    onFunction: () {},
-                    offFunction: () {},
-                  ),
-                  // 오디오 켜기/끄기
-                  ToggleButton(
-                    iconOn: Icons.mic,
-                    iconOff: Icons.mic_off,
-                    onFunction: () {},
-                    offFunction: () {},
-                  ),
-                  IconButton(
-                    onPressed: () async {
-                      try {
-                        debugPrint('통화 종료 버튼 클릭');
-
-                        // WebRTC 연결 정리
-                        await signaling.hangUp(localRenderer);
-                        debugPrint('WebRTC 연결 정리 완료');
-
-                        // 비디오 미팅 서비스 종료
-                        await VideoMeetingService.endVideoCall(roomId ?? '');
-                        debugPrint('비디오 미팅 서비스 종료 완료');
-
-                        // HomePage로 이동
-                        if (mounted) {
-                          AppRouter.pushAndRemoveUntil(HomePage());
-                        }
-                      } catch (e) {
-                        debugPrint('통화 종료 중 오류 발생: $e');
-
-                        // 오류가 발생해도 HomePage로 이동
-                        if (mounted) {
-                          AppRouter.pushAndRemoveUntil(HomePage());
-                        }
-                      }
-                    },
-                    icon: Icon(Icons.call_end),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+      body: kIsWeb ? _webBody() : _mobileBody(),
+      bottomNavigationBar: kIsWeb ? null : _callControlButton(),
     );
   }
 }
