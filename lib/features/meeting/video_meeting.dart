@@ -29,6 +29,8 @@ class _VideoMeetingState extends State<VideoMeeting> {
   String? roomId;
   TextEditingController roomIdController = TextEditingController(text: '');
   bool isConnected = false;
+  bool isVideoEnabled = true;
+  bool isAudioEnabled = true;
 
   @override
   void initState() {
@@ -80,6 +82,20 @@ class _VideoMeetingState extends State<VideoMeeting> {
         await signaling.joinRoom(existingRoomId);
       }
     }
+  }
+
+  Future<void> _toggleVideo() async {
+    await signaling.toggleVideo();
+    setState(() {
+      isVideoEnabled = signaling.isVideoEnabled();
+    });
+  }
+
+  Future<void> _toggleAudio() async {
+    await signaling.toggleAudio();
+    setState(() {
+      isAudioEnabled = signaling.isAudioEnabled();
+    });
   }
 
   Widget _mobileBody() {
@@ -248,15 +264,17 @@ class _VideoMeetingState extends State<VideoMeeting> {
           ToggleButton(
             iconOn: Icons.videocam,
             iconOff: Icons.videocam_off,
-            onFunction: () {},
-            offFunction: () {},
+            initialState: isVideoEnabled,
+            onFunction: () => _toggleVideo(),
+            offFunction: () => _toggleVideo(),
           ),
           // 오디오 켜기/끄기
           ToggleButton(
             iconOn: Icons.mic,
             iconOff: Icons.mic_off,
-            onFunction: () {},
-            offFunction: () {},
+            initialState: isAudioEnabled,
+            onFunction: () => _toggleAudio(),
+            offFunction: () => _toggleAudio(),
           ),
           IconButton(
             onPressed: () async {

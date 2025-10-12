@@ -76,7 +76,7 @@ class Signaling {
 
       Map<String, dynamic> roomWithOffer = {'offer': offer.toMap()};
       await roomRef.set(roomWithOffer);
-      var roomId = roomRef.id;
+      roomId = roomRef.id;
 
       peerConnection?.onTrack = (RTCTrackEvent event) {
         if (event.streams.isNotEmpty) {
@@ -125,7 +125,7 @@ class Signaling {
             }
           });
 
-      return roomId;
+      return roomId!;
     } catch (e) {
       debugPrint('createRoom 오류: $e');
       return "";
@@ -133,6 +133,7 @@ class Signaling {
   }
 
   Future<void> joinRoom(String roomId) async {
+    this.roomId = roomId;
     FirebaseFirestore db = FirebaseFirestore.instance;
     DocumentReference roomRef = db.collection('rooms').doc(roomId);
     var roomSnapshot = await roomRef.get();
@@ -206,7 +207,6 @@ class Signaling {
 
   Future<void> hangUp(RTCVideoRenderer localVideo) async {
     try {
-      // 리스너 정리
       _remoteSessionDescriptionSubscription?.cancel();
       _remoteSessionDescriptionSubscription = null;
       _calleeCandidatesSubscription?.cancel();
@@ -236,32 +236,43 @@ class Signaling {
         debugPrint('PeerConnection 정리 완료');
       }
 
-      // Firestore 방 데이터 정리
+      // Firestore 방(Room&Call) 데이터 정리
       if (roomId != null) {
         try {
+          debugPrint('방 삭제 시작 - roomId: $roomId');
           var db = FirebaseFirestore.instance;
           var roomRef = db.collection('rooms').doc(roomId);
+          var callRef = db.collection('calls').doc(roomId);
 
-          // Callee candidates 정리
+          WriteBatch batch = db.batch();
+
           var calleeCandidates =
               await roomRef.collection('calleeCandidates').get();
           for (var doc in calleeCandidates.docs) {
-            await doc.reference.delete();
+            batch.delete(doc.reference);
           }
 
-          // Caller candidates 정리
           var callerCandidates =
               await roomRef.collection('callerCandidates').get();
           for (var doc in callerCandidates.docs) {
-            await doc.reference.delete();
+            batch.delete(doc.reference);
           }
+          batch.delete(roomRef);
+          batch.delete(callRef);
 
-          // 방 삭제
-          await roomRef.delete();
-          debugPrint('Firestore 방 데이터 정리 완료');
+          await batch.commit();
+          debugPrint('Firestore 방 데이터 및 서브컬렉션 정리 완료');
         } catch (e) {
           debugPrint('Firestore 정리 중 오류: $e');
+          debugPrint('오류 타입: ${e.runtimeType}');
+
+          if (e.toString().contains('not-found') ||
+              e.toString().contains('permission-denied')) {
+            debugPrint('문서가 이미 삭제되었거나 권한이 없음 - 정상적인 상황');
+          }
         }
+      } else {
+        debugPrint('roomId가 null이므로 방 삭제를 건너뜀');
       }
 
       // 스트림 리소스 정리
@@ -283,7 +294,43 @@ class Signaling {
     }
   }
 
-  // NOTE: 상태 변화 모니터링: 설정 기능 등 추가 예정
+  Future<void> toggleVideo() async {
+    if (localStream != null) {
+      List<MediaStreamTrack> videoTracks = localStream!.getVideoTracks();
+      for (var track in videoTracks) {
+        track.enabled = !track.enabled;
+        debugPrint('비디오 트랙 상태 변경: ${track.enabled}');
+      }
+    }
+  }
+
+  Future<void> toggleAudio() async {
+    if (localStream != null) {
+      List<MediaStreamTrack> audioTracks = localStream!.getAudioTracks();
+      for (var track in audioTracks) {
+        track.enabled = !track.enabled;
+        debugPrint('오디오 트랙 상태 변경: ${track.enabled}');
+      }
+    }
+  }
+
+  bool isVideoEnabled() {
+    if (localStream != null) {
+      List<MediaStreamTrack> videoTracks = localStream!.getVideoTracks();
+      return videoTracks.isNotEmpty && videoTracks.first.enabled;
+    }
+    return false;
+  }
+
+  bool isAudioEnabled() {
+    if (localStream != null) {
+      List<MediaStreamTrack> audioTracks = localStream!.getAudioTracks();
+      return audioTracks.isNotEmpty && audioTracks.first.enabled;
+    }
+    return false;
+  }
+
+  // NOTE: 상태 변화 모니터링
   void registerPeerConnectionListeners() {
     peerConnection?.onIceGatheringState = (RTCIceGatheringState state) {
       debugPrint('ICE Gathering 상태 변화: $state');
@@ -291,7 +338,6 @@ class Signaling {
 
     peerConnection?.onConnectionState = (RTCPeerConnectionState state) {
       debugPrint('Connection 상태 변화: $state');
-      // 연결 상태에 따른 콜백 호출
       if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
         onConnectionStatusChanged?.call(true);
       } else if (state ==
@@ -308,7 +354,6 @@ class Signaling {
 
     peerConnection?.onIceConnectionState = (RTCIceConnectionState state) {
       debugPrint('ICE 연결상태 변화: $state');
-      // ICE 연결 상태에 따른 콜백 호출
       if (state == RTCIceConnectionState.RTCIceConnectionStateConnected ||
           state == RTCIceConnectionState.RTCIceConnectionStateCompleted) {
         onConnectionStatusChanged?.call(true);
@@ -324,7 +369,6 @@ class Signaling {
       debugPrint('Stream 추가: $stream');
       onAddRemoteStream?.call(stream);
       remoteStream = stream;
-      // 원격 스트림이 추가되면 연결됨으로 간주
       onConnectionStatusChanged?.call(true);
     };
   }
