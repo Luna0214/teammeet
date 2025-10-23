@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:teammeet/blocs/meeting_bloc/video_meeting_bloc.dart';
 import 'package:teammeet/features/home/home_page.dart';
 import 'package:teammeet/features/meeting/signaling.dart';
 import 'package:teammeet/features/meeting/video_meeting_service.dart';
@@ -56,6 +58,10 @@ class _VideoMeetingState extends State<VideoMeeting> {
       setState(() {
         isConnected = connected;
       });
+
+      context.read<VideoMeetingBloc>().add(
+        RemoteVideoConnectionStatusChanged(connected),
+      );
     };
 
     signaling.onAddRemoteStream = (MediaStream stream) {
@@ -63,6 +69,13 @@ class _VideoMeetingState extends State<VideoMeeting> {
       setState(() {
         remoteRenderer.srcObject = stream;
       });
+
+      context.read<VideoMeetingBloc>().add(
+        RemoteStreamReceived(
+          hasVideo: stream.getVideoTracks().isNotEmpty,
+          hasAudio: stream.getAudioTracks().isNotEmpty,
+        ),
+      );
     };
 
     await signaling.openUserMedia(localRenderer, remoteRenderer);
@@ -84,18 +97,44 @@ class _VideoMeetingState extends State<VideoMeeting> {
     }
   }
 
-  Future<void> _toggleVideo() async {
-    await signaling.toggleVideo();
-    setState(() {
-      isVideoEnabled = signaling.isVideoEnabled();
-    });
+  void _toggleVideo() {
+    signaling.toggleVideo();
+    bool isEnabled = signaling.isVideoEnabled();
+
+    context.read<VideoMeetingBloc>().add(LocalVideoStatusChanged(isEnabled));
   }
 
-  Future<void> _toggleAudio() async {
-    await signaling.toggleAudio();
-    setState(() {
-      isAudioEnabled = signaling.isAudioEnabled();
-    });
+  void _toggleAudio() {
+    signaling.toggleAudio();
+    bool isEnabled = signaling.isAudioEnabled();
+
+    context.read<VideoMeetingBloc>().add(LocalAudioStatusChanged(isEnabled));
+  }
+
+  Future<void> _hangUp() async {
+    try {
+      debugPrint('통화 종료 버튼 클릭');
+
+      // WebRTC 연결 정리
+      await signaling.hangUp(localRenderer);
+      debugPrint('WebRTC 연결 정리 완료');
+
+      // 비디오 미팅 서비스 종료
+      await VideoMeetingService.endVideoCall(roomId ?? '');
+      debugPrint('비디오 미팅 서비스 종료 완료');
+
+      // HomePage로 이동
+      if (mounted) {
+        AppRouter.pushAndRemoveUntil(HomePage());
+      }
+    } catch (e) {
+      debugPrint('통화 종료 중 오류 발생: $e');
+
+      // 오류가 발생해도 HomePage로 이동
+      if (mounted) {
+        AppRouter.pushAndRemoveUntil(HomePage());
+      }
+    }
   }
 
   Widget _mobileBody() {
@@ -187,11 +226,43 @@ class _VideoMeetingState extends State<VideoMeeting> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: RTCVideoView(
-                        localRenderer,
-                        filterQuality: FilterQuality.high,
-                        objectFit:
-                            RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                      child: BlocBuilder<VideoMeetingBloc, VideoMeetingState>(
+                        builder: (context, state) {
+                          bool showLocalVideo = true;
+                          if (state is VideoMeetingStatus) {
+                            showLocalVideo = state.localVideoEnabled;
+                          }
+
+                          return showLocalVideo
+                              ? RTCVideoView(
+                                localRenderer,
+                                filterQuality: FilterQuality.high,
+                                objectFit:
+                                    RTCVideoViewObjectFit
+                                        .RTCVideoViewObjectFitCover,
+                              )
+                              : Container(
+                                color: Colors.black,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.videocam_off,
+                                      size: 48,
+                                      color: Colors.white,
+                                    ),
+                                    SizedBox(height: 8),
+                                    Text(
+                                      '카메라가 비활성화되었습니다',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                        },
                       ),
                     ),
                   ),
@@ -209,8 +280,43 @@ class _VideoMeetingState extends State<VideoMeeting> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child:
-                          isConnected
+                      child: BlocBuilder<VideoMeetingBloc, VideoMeetingState>(
+                        builder: (context, state) {
+                          bool isConnected = false;
+                          bool isRemoteVideoEnabled = false;
+
+                          if (state is VideoMeetingStatus) {
+                            isConnected = state.isConnected;
+                            isRemoteVideoEnabled =
+                                state.hasRemoteStream &&
+                                state.remoteVideoEnabled;
+                          }
+
+                          if (!isConnected) {
+                            return Container(
+                              color: Colors.black,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.videocam_off,
+                                    size: 48,
+                                    color: Colors.white,
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    '연결 종료',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          return isRemoteVideoEnabled
                               ? RTCVideoView(
                                 remoteRenderer,
                                 filterQuality: FilterQuality.high,
@@ -230,7 +336,7 @@ class _VideoMeetingState extends State<VideoMeeting> {
                                     ),
                                     SizedBox(height: 8),
                                     Text(
-                                      isConnected ? '연결됨' : '연결 대기',
+                                      '상대방이 카메라를 비활성화했습니다',
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontSize: 14,
@@ -238,7 +344,9 @@ class _VideoMeetingState extends State<VideoMeeting> {
                                     ),
                                   ],
                                 ),
-                              ),
+                              );
+                        },
+                      ),
                     ),
                   ),
                 ),
@@ -260,46 +368,42 @@ class _VideoMeetingState extends State<VideoMeeting> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          // 비디오 켜기/끄기
-          ToggleButton(
-            iconOn: Icons.videocam,
-            iconOff: Icons.videocam_off,
-            initialState: isVideoEnabled,
-            onFunction: () => _toggleVideo(),
-            offFunction: () => _toggleVideo(),
+          BlocBuilder<VideoMeetingBloc, VideoMeetingState>(
+            builder: (context, state) {
+              bool isVideoEnabled = true;
+              if (state is VideoMeetingStatus) {
+                isVideoEnabled = state.localVideoEnabled;
+              }
+
+              return ToggleButton(
+                iconOn: Icons.videocam,
+                iconOff: Icons.videocam_off,
+                initialState: isVideoEnabled,
+                onFunction: () => _toggleVideo(),
+                offFunction: () => _toggleVideo(),
+              );
+            },
           ),
-          // 오디오 켜기/끄기
-          ToggleButton(
-            iconOn: Icons.mic,
-            iconOff: Icons.mic_off,
-            initialState: isAudioEnabled,
-            onFunction: () => _toggleAudio(),
-            offFunction: () => _toggleAudio(),
+          BlocBuilder<VideoMeetingBloc, VideoMeetingState>(
+            builder: (context, state) {
+              bool isAudioEnabled = true;
+              if (state is VideoMeetingStatus) {
+                isAudioEnabled = state.localAudioEnabled;
+              }
+
+              return ToggleButton(
+                iconOn: Icons.mic,
+                iconOff: Icons.mic_off,
+                initialState: isAudioEnabled,
+                onFunction: () => _toggleAudio(),
+                offFunction: () => _toggleAudio(),
+              );
+            },
           ),
           IconButton(
             onPressed: () async {
-              try {
-                debugPrint('통화 종료 버튼 클릭');
-
-                // WebRTC 연결 정리
-                await signaling.hangUp(localRenderer);
-                debugPrint('WebRTC 연결 정리 완료');
-
-                // 비디오 미팅 서비스 종료
-                await VideoMeetingService.endVideoCall(roomId ?? '');
-                debugPrint('비디오 미팅 서비스 종료 완료');
-
-                // HomePage로 이동
-                if (mounted) {
-                  AppRouter.pushAndRemoveUntil(HomePage());
-                }
-              } catch (e) {
-                debugPrint('통화 종료 중 오류 발생: $e');
-
-                // 오류가 발생해도 HomePage로 이동
-                if (mounted) {
-                  AppRouter.pushAndRemoveUntil(HomePage());
-                }
+              if (mounted) {
+                await _hangUp();
               }
             },
             icon: Icon(Icons.call_end),
@@ -311,14 +415,21 @@ class _VideoMeetingState extends State<VideoMeeting> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        centerTitle: true,
-        title: Text('비디오 미팅'),
+    return BlocListener<VideoMeetingBloc, VideoMeetingState>(
+      listener: (context, state) {
+        if (state is VideoMeetingStatus) {
+          debugPrint('미팅 상태 업데이트: ${state.toString()}');
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          centerTitle: true,
+          title: Text('비디오 미팅'),
+        ),
+        body: kIsWeb ? _webBody() : _mobileBody(),
+        bottomNavigationBar: kIsWeb ? null : _callControlButton(),
       ),
-      body: kIsWeb ? _webBody() : _mobileBody(),
-      bottomNavigationBar: kIsWeb ? null : _callControlButton(),
     );
   }
 }

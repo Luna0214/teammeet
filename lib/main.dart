@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:teammeet/blocs/meeting_bloc/video_meeting_bloc.dart';
 import 'package:teammeet/features/auth/login_page.dart';
 import 'package:teammeet/shared/app_router.dart';
 import 'firebase_options.dart';
@@ -16,14 +18,17 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      navigatorKey: AppRouter.navigatorKey,
-      debugShowCheckedModeBanner: false,
-      title: 'teammeet',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+    return MultiBlocProvider(
+      providers: [BlocProvider(create: (context) => VideoMeetingBloc())],
+      child: MaterialApp(
+        navigatorKey: AppRouter.navigatorKey,
+        debugShowCheckedModeBanner: false,
+        title: 'teammeet',
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        ),
+        home: const LoginPage(),
       ),
-      home: const LoginPage(),
     );
   }
 }

@@ -322,9 +322,30 @@ class Signaling {
     return false;
   }
 
+  bool isRemoteVideoEnabled() {
+    if (remoteStream != null) {
+      List<MediaStreamTrack> videoTracks = remoteStream!.getVideoTracks();
+      debugPrint(
+        '원격 비디오 상태 확인 완료: ${videoTracks.isNotEmpty && videoTracks.first.enabled}',
+      );
+      return videoTracks.first.enabled;
+    } else {
+      debugPrint('원격 비디오 상태 확인 불가');
+      return false;
+    }
+  }
+
   bool isAudioEnabled() {
     if (localStream != null) {
       List<MediaStreamTrack> audioTracks = localStream!.getAudioTracks();
+      return audioTracks.isNotEmpty && audioTracks.first.enabled;
+    }
+    return false;
+  }
+
+  bool isRemoteAudioEnabled() {
+    if (remoteStream != null) {
+      List<MediaStreamTrack> audioTracks = remoteStream!.getAudioTracks();
       return audioTracks.isNotEmpty && audioTracks.first.enabled;
     }
     return false;
