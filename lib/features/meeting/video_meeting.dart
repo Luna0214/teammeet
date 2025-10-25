@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:teammeet/blocs/meeting_bloc/video_meeting_bloc.dart';
+import 'package:teammeet/blocs/meeting_bloc/video_meeting_event.dart';
+import 'package:teammeet/blocs/meeting_bloc/video_meeting_status.dart';
 import 'package:teammeet/features/home/home_page.dart';
 import 'package:teammeet/features/meeting/signaling.dart';
 import 'package:teammeet/features/meeting/video_meeting_service.dart';
@@ -30,7 +32,6 @@ class _VideoMeetingState extends State<VideoMeeting> {
   RTCVideoRenderer remoteRenderer = RTCVideoRenderer();
   String? roomId;
   TextEditingController roomIdController = TextEditingController(text: '');
-  bool isConnected = false;
   bool isVideoEnabled = true;
   bool isAudioEnabled = true;
 
@@ -42,8 +43,6 @@ class _VideoMeetingState extends State<VideoMeeting> {
 
   @override
   void dispose() {
-    signaling.onConnectionStatusChanged = null;
-    signaling.onAddRemoteStream = null;
     localRenderer.dispose();
     remoteRenderer.dispose();
     super.dispose();
@@ -53,30 +52,8 @@ class _VideoMeetingState extends State<VideoMeeting> {
     await localRenderer.initialize();
     await remoteRenderer.initialize();
 
-    signaling.onConnectionStatusChanged = (bool connected) {
-      if (!mounted) return;
-      setState(() {
-        isConnected = connected;
-      });
-
-      context.read<VideoMeetingBloc>().add(
-        RemoteVideoConnectionStatusChanged(connected),
-      );
-    };
-
-    signaling.onAddRemoteStream = (MediaStream stream) {
-      if (!mounted) return;
-      setState(() {
-        remoteRenderer.srcObject = stream;
-      });
-
-      context.read<VideoMeetingBloc>().add(
-        RemoteStreamReceived(
-          hasVideo: stream.getVideoTracks().isNotEmpty,
-          hasAudio: stream.getAudioTracks().isNotEmpty,
-        ),
-      );
-    };
+    // Signaling에 Bloc 전달
+    signaling.setBloc(context.read<VideoMeetingBloc>());
 
     await signaling.openUserMedia(localRenderer, remoteRenderer);
 
@@ -99,27 +76,19 @@ class _VideoMeetingState extends State<VideoMeeting> {
 
   void _toggleVideo() {
     signaling.toggleVideo();
-    bool isEnabled = signaling.isVideoEnabled();
-
-    context.read<VideoMeetingBloc>().add(LocalVideoStatusChanged(isEnabled));
   }
 
   void _toggleAudio() {
     signaling.toggleAudio();
-    bool isEnabled = signaling.isAudioEnabled();
-
-    context.read<VideoMeetingBloc>().add(LocalAudioStatusChanged(isEnabled));
   }
 
   Future<void> _hangUp() async {
     try {
       debugPrint('통화 종료 버튼 클릭');
 
-      // WebRTC 연결 정리
       await signaling.hangUp(localRenderer);
       debugPrint('WebRTC 연결 정리 완료');
 
-      // 비디오 미팅 서비스 종료
       await VideoMeetingService.endVideoCall(roomId ?? '');
       debugPrint('비디오 미팅 서비스 종료 완료');
 
@@ -138,69 +107,113 @@ class _VideoMeetingState extends State<VideoMeeting> {
   }
 
   Widget _mobileBody() {
-    return Stack(
-      children: [
-        // 메인 비디오 (원격 렌더러)
-        Positioned.fill(
-          child: Container(
-            color: Colors.black,
-            child:
-                isConnected
-                    ? RTCVideoView(
-                      remoteRenderer,
-                      filterQuality: FilterQuality.medium,
-                      objectFit:
-                          RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-                    )
-                    : Container(
-                      color: Colors.black,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.videocam_off,
-                            size: 48,
-                            color: Colors.white,
+    return BlocBuilder<VideoMeetingBloc, VideoMeetingState>(
+      builder: (context, state) {
+        return Stack(
+          children: [
+            // 메인 비디오 (원격 렌더러)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black,
+                child:
+                    state is VideoMeetingStatus &&
+                            state.iceConnectionStatus ==
+                                ICEConnectionStatus.connected
+                        ? RTCVideoView(
+                          remoteRenderer,
+                          filterQuality: FilterQuality.medium,
+                          objectFit:
+                              RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                        )
+                        : Container(
+                          color: Colors.black,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.videocam_off,
+                                size: 48,
+                                color: Colors.white,
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                iceConnectionStatusMessage(
+                                  state is VideoMeetingStatus
+                                      ? state.iceConnectionStatus
+                                      : ICEConnectionStatus.unknown,
+                                ),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
                           ),
-                          SizedBox(height: 8),
-                          Text(
-                            isConnected ? '연결됨' : '연결 대기',
-                            style: TextStyle(color: Colors.white, fontSize: 14),
-                          ),
-                        ],
-                      ),
-                    ),
-          ),
-        ),
-        // 로컬 비디오 작은 박스
-        Positioned(
-          bottom: 32,
-          right: 16,
-          child: Container(
-            width: 120,
-            height: 160,
-            decoration: BoxDecoration(
-              color: Colors.black,
-              border: Border.all(color: Colors.white, width: 2),
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  blurRadius: 8,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: RTCVideoView(
-                localRenderer,
-                objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                        ),
               ),
             ),
-          ),
-        ),
-      ],
+            // 로컬 비디오 작은 박스
+            Positioned(
+              bottom: 32,
+              right: 16,
+              child: Container(
+                width: 120,
+                height: 160,
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  border: Border.all(color: Colors.white, width: 2),
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child:
+                      state is VideoMeetingStatus &&
+                              state.peerConnectionStatus ==
+                                  PeerConnectionStatus.connected
+                          ? RTCVideoView(
+                            localRenderer,
+                            objectFit:
+                                RTCVideoViewObjectFit
+                                    .RTCVideoViewObjectFitCover,
+                          )
+                          : Container(
+                            color: Colors.black,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.videocam_off,
+                                  size: 48,
+                                  color: Colors.white,
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  peerConnectionStatusMessage(
+                                    state is VideoMeetingStatus
+                                        ? state.peerConnectionStatus
+                                        : PeerConnectionStatus.unknown,
+                                  ),
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -228,12 +241,10 @@ class _VideoMeetingState extends State<VideoMeeting> {
                       borderRadius: BorderRadius.circular(8),
                       child: BlocBuilder<VideoMeetingBloc, VideoMeetingState>(
                         builder: (context, state) {
-                          bool showLocalVideo = true;
-                          if (state is VideoMeetingStatus) {
-                            showLocalVideo = state.localVideoEnabled;
-                          }
-
-                          return showLocalVideo
+                          return state is VideoMeetingStatus &&
+                                  state.peerConnectionStatus ==
+                                      PeerConnectionStatus.connected &&
+                                  state.localVideoEnabled
                               ? RTCVideoView(
                                 localRenderer,
                                 filterQuality: FilterQuality.high,
@@ -282,17 +293,9 @@ class _VideoMeetingState extends State<VideoMeeting> {
                       borderRadius: BorderRadius.circular(8),
                       child: BlocBuilder<VideoMeetingBloc, VideoMeetingState>(
                         builder: (context, state) {
-                          bool isConnected = false;
-                          bool isRemoteVideoEnabled = false;
-
-                          if (state is VideoMeetingStatus) {
-                            isConnected = state.isConnected;
-                            isRemoteVideoEnabled =
-                                state.hasRemoteStream &&
-                                state.remoteVideoEnabled;
-                          }
-
-                          if (!isConnected) {
+                          if (state is VideoMeetingStatus &&
+                              state.iceConnectionStatus !=
+                                  ICEConnectionStatus.connected) {
                             return Container(
                               color: Colors.black,
                               child: Column(
@@ -305,7 +308,9 @@ class _VideoMeetingState extends State<VideoMeeting> {
                                   ),
                                   SizedBox(height: 8),
                                   Text(
-                                    '연결 종료',
+                                    iceConnectionStatusMessage(
+                                      state.iceConnectionStatus,
+                                    ),
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 14,
@@ -316,7 +321,10 @@ class _VideoMeetingState extends State<VideoMeeting> {
                             );
                           }
 
-                          return isRemoteVideoEnabled
+                          return state is VideoMeetingStatus &&
+                                  state.iceConnectionStatus ==
+                                      ICEConnectionStatus.connected &&
+                                  state.remoteVideoEnabled
                               ? RTCVideoView(
                                 remoteRenderer,
                                 filterQuality: FilterQuality.high,
@@ -419,6 +427,17 @@ class _VideoMeetingState extends State<VideoMeeting> {
       listener: (context, state) {
         if (state is VideoMeetingStatus) {
           debugPrint('미팅 상태 업데이트: ${state.toString()}');
+          if (state.remoteVideoEnabled || state.remoteAudioEnabled) {
+            if (signaling.remoteStream != null) {
+              setState(() {
+                remoteRenderer.srcObject = signaling.remoteStream;
+              });
+            } else {
+              setState(() {
+                remoteRenderer.srcObject = null;
+              });
+            }
+          }
         }
       },
       child: Scaffold(

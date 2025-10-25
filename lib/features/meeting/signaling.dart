@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:teammeet/blocs/meeting_bloc/video_meeting_bloc.dart';
+import 'package:teammeet/blocs/meeting_bloc/video_meeting_event.dart';
+import 'package:teammeet/blocs/meeting_bloc/video_meeting_status.dart';
 
 class Signaling {
   RTCPeerConnection? peerConnection;
@@ -10,8 +13,9 @@ class Signaling {
   MediaStream? remoteStream;
   String? roomId;
   String? currentRoomText;
-  Function(MediaStream stream)? onAddRemoteStream;
-  Function(bool isConnected)? onConnectionStatusChanged;
+
+  // Bloc 참조 추가
+  VideoMeetingBloc? _bloc;
 
   StreamSubscription? _remoteSessionDescriptionSubscription;
   StreamSubscription? _calleeCandidatesSubscription;
@@ -27,6 +31,11 @@ class Signaling {
       },
     ],
   };
+
+  // NOTE: Bloc 설정
+  void setBloc(VideoMeetingBloc bloc) {
+    _bloc = bloc;
+  }
 
   Future<void> openUserMedia(
     RTCVideoRenderer localVideo,
@@ -81,7 +90,16 @@ class Signaling {
       peerConnection?.onTrack = (RTCTrackEvent event) {
         if (event.streams.isNotEmpty) {
           //debugPrint('Remote Stream 획득: ${event.streams[0]}');
-          onAddRemoteStream?.call(event.streams[0]);
+          _bloc?.add(
+            RemoteVideoStatusChanged(
+              event.streams[0].getVideoTracks().isNotEmpty,
+            ),
+          );
+          _bloc?.add(
+            RemoteAudioStatusChanged(
+              event.streams[0].getAudioTracks().isNotEmpty,
+            ),
+          );
           remoteStream = event.streams[0];
         }
       };
@@ -160,7 +178,16 @@ class Signaling {
       peerConnection?.onTrack = (RTCTrackEvent event) {
         if (event.streams.isNotEmpty) {
           debugPrint('Remote Stream 획득: ${event.streams[0]}');
-          onAddRemoteStream?.call(event.streams[0]);
+          _bloc?.add(
+            RemoteVideoStatusChanged(
+              event.streams[0].getVideoTracks().isNotEmpty,
+            ),
+          );
+          _bloc?.add(
+            RemoteAudioStatusChanged(
+              event.streams[0].getAudioTracks().isNotEmpty,
+            ),
+          );
           remoteStream = event.streams[0];
         }
       };
@@ -236,7 +263,6 @@ class Signaling {
         debugPrint('PeerConnection 정리 완료');
       }
 
-      // Firestore 방(Room&Call) 데이터 정리
       if (roomId != null) {
         try {
           debugPrint('방 삭제 시작 - roomId: $roomId');
@@ -275,7 +301,6 @@ class Signaling {
         debugPrint('roomId가 null이므로 방 삭제를 건너뜀');
       }
 
-      // 스트림 리소스 정리
       if (localStream != null) {
         localStream!.dispose();
         localStream = null;
@@ -301,6 +326,8 @@ class Signaling {
         track.enabled = !track.enabled;
         debugPrint('비디오 트랙 상태 변경: ${track.enabled}');
       }
+
+      _bloc?.add(LocalVideoStatusChanged(isVideoEnabled()));
     }
   }
 
@@ -311,6 +338,8 @@ class Signaling {
         track.enabled = !track.enabled;
         debugPrint('오디오 트랙 상태 변경: ${track.enabled}');
       }
+
+      _bloc?.add(LocalAudioStatusChanged(isAudioEnabled()));
     }
   }
 
@@ -359,14 +388,8 @@ class Signaling {
 
     peerConnection?.onConnectionState = (RTCPeerConnectionState state) {
       debugPrint('Connection 상태 변화: $state');
-      if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
-        onConnectionStatusChanged?.call(true);
-      } else if (state ==
-              RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
-          state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
-          state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
-        onConnectionStatusChanged?.call(false);
-      }
+
+      _bloc?.add(PeerConnectionStatusChanged(peerConnectionStatus(state)));
     };
 
     peerConnection?.onSignalingState = (RTCSignalingState state) {
@@ -375,22 +398,15 @@ class Signaling {
 
     peerConnection?.onIceConnectionState = (RTCIceConnectionState state) {
       debugPrint('ICE 연결상태 변화: $state');
-      if (state == RTCIceConnectionState.RTCIceConnectionStateConnected ||
-          state == RTCIceConnectionState.RTCIceConnectionStateCompleted) {
-        onConnectionStatusChanged?.call(true);
-      } else if (state ==
-              RTCIceConnectionState.RTCIceConnectionStateDisconnected ||
-          state == RTCIceConnectionState.RTCIceConnectionStateFailed ||
-          state == RTCIceConnectionState.RTCIceConnectionStateClosed) {
-        onConnectionStatusChanged?.call(false);
-      }
+
+      _bloc?.add(ICEConnectionStatusChanged(iceConnectionStatus(state)));
     };
 
     peerConnection?.onAddStream = (MediaStream stream) {
       debugPrint('Stream 추가: $stream');
-      onAddRemoteStream?.call(stream);
+      _bloc?.add(RemoteVideoStatusChanged(stream.getVideoTracks().isNotEmpty));
+      _bloc?.add(RemoteAudioStatusChanged(stream.getAudioTracks().isNotEmpty));
       remoteStream = stream;
-      onConnectionStatusChanged?.call(true);
     };
   }
 }
